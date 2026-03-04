@@ -1,425 +1,204 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PLAY</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
+  <title>VAULT</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0a0a0a;
-      --surface: #111111;
-      --border: #222222;
-      --accent: #e8ff47;
-      --accent2: #ff4747;
-      --text: #f0f0f0;
-      --muted: #555;
+      --bg: #080808; --surface: #111; --surface2: #181818;
+      --border: #1f1f1f; --accent: #c8ff47; --accent-dim: rgba(200,255,71,0.12);
+      --text: #efefef; --muted: #4a4a4a; --muted2: #2a2a2a;
     }
+    html, body { height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      overflow-x: hidden;
-    }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.15em; color: var(--accent); }
+    .subtitle { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
 
-    /* Grain overlay */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 999;
-      opacity: 0.3;
-    }
+    .main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 65px); }
+    .player-side { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .video-wrap { position: relative; background: #000; aspect-ratio: 16/9; width: 100%; max-height: 65vh; overflow: hidden; }
+    video { width: 100%; height: 100%; object-fit: contain; display: block; }
 
-    header {
-      text-align: center;
-      margin-bottom: 3rem;
-      animation: fadeDown 0.8s ease both;
-    }
+    .error-state { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; color: var(--muted); background: #000; }
+    .error-state.show { display: flex; }
+    .error-state .icon { font-size: 2.5rem; opacity: 0.3; }
+    .error-state p { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5; }
 
-    header h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(4rem, 12vw, 9rem);
-      letter-spacing: 0.08em;
-      line-height: 1;
-      color: var(--accent);
-      text-shadow: 4px 4px 0px var(--accent2);
-    }
-
-    header p {
-      font-size: 0.85rem;
-      color: var(--muted);
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      margin-top: 0.4rem;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 860px;
-      animation: fadeUp 0.9s ease 0.2s both;
-    }
-
-    /* Drop zone */
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 4px;
-      padding: 3.5rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      background: var(--surface);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .drop-zone::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, transparent 40%, rgba(232,255,71,0.03));
-      pointer-events: none;
-    }
-
-    .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--accent);
-      background: #141414;
-    }
-
-    .drop-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-      filter: grayscale(1);
-      transition: filter 0.2s;
-    }
-
-    .drop-zone:hover .drop-icon { filter: grayscale(0); }
-
-    .drop-zone h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.8rem;
-      letter-spacing: 0.1em;
-      color: var(--text);
-      margin-bottom: 0.4rem;
-    }
-
-    .drop-zone p {
-      font-size: 0.8rem;
-      color: var(--muted);
-      letter-spacing: 0.1em;
-    }
-
-    .drop-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Player */
-    .player-wrap {
-      display: none;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .player-wrap.active { display: flex; }
-
-    .video-container {
-      position: relative;
-      width: 100%;
-      background: #000;
-      border-radius: 4px 4px 0 0;
-      overflow: hidden;
-      aspect-ratio: 16/9;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: contain;
-    }
-
-    /* Custom controls */
-    .controls {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 4px 4px;
-      padding: 1rem 1.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.7rem;
-    }
-
-    .progress-bar-wrap {
-      width: 100%;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.1s linear;
-      pointer-events: none;
-    }
-
-    .progress-bar-wrap:hover { height: 6px; }
-
-    .controls-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .btn {
-      background: none;
-      border: none;
-      color: var(--text);
-      cursor: pointer;
-      padding: 0.3rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.8;
-      transition: opacity 0.15s, color 0.15s;
-      font-size: 1.1rem;
-    }
-
+    .controls { background: var(--surface); border-top: 1px solid var(--border); padding: 0.75rem 1.2rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .progress-wrap { width: 100%; height: 3px; background: var(--muted2); border-radius: 2px; cursor: pointer; transition: height 0.15s; }
+    .progress-wrap:hover { height: 5px; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; transition: width 0.1s linear; }
+    .ctrl-row { display: flex; align-items: center; gap: 0.8rem; }
+    .btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 0.25rem; font-size: 1rem; opacity: 0.7; transition: opacity 0.15s, color 0.15s; line-height: 1; }
     .btn:hover { opacity: 1; color: var(--accent); }
+    .vol-wrap { display: flex; align-items: center; gap: 0.4rem; }
+    .vol-slider { -webkit-appearance: none; width: 65px; height: 2px; background: var(--muted2); outline: none; cursor: pointer; border-radius: 2px; }
+    .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+    .now-playing { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+    .time-disp { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.08em; color: var(--muted); margin-left: auto; }
 
-    .time-display {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1rem;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-left: auto;
-    }
+    .playlist-side { width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .playlist-header { padding: 1rem 1.2rem 0.8rem; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 0.6rem; flex-shrink: 0; }
+    .playlist-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.15em; color: var(--text); }
+    .count-badge { font-size: 0.7rem; color: var(--muted); background: var(--muted2); padding: 0.1rem 0.5rem; border-radius: 20px; }
+    .playlist-list { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+    .playlist-list::-webkit-scrollbar { width: 4px; }
+    .playlist-list::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
 
-    .volume-wrap {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+    .playlist-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 1.2rem; cursor: pointer; transition: background 0.15s; border-left: 2px solid transparent; }
+    .playlist-item:hover { background: var(--surface2); }
+    .playlist-item.active { background: var(--accent-dim); border-left-color: var(--accent); }
+    .item-num { font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem; color: var(--muted); min-width: 22px; text-align: center; }
+    .playlist-item.active .item-num { color: var(--accent); }
+    .item-name { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+    .playlist-item.active .item-name { color: var(--accent); }
 
-    .volume-slider {
-      -webkit-appearance: none;
-      width: 70px;
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-    }
-
-    .file-name {
-      font-size: 0.75rem;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 200px;
-    }
-
-    .change-btn {
-      margin-top: 1.2rem;
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.75rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      padding: 0.5rem 1.2rem;
-      cursor: pointer;
-      border-radius: 2px;
-      transition: border-color 0.2s, color 0.2s;
-      align-self: flex-start;
-    }
-
-    .change-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    footer {
-      margin-top: 2.5rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      opacity: 0.5;
+    @media (max-width: 640px) {
+      .playlist-side { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+      .main { flex-direction: column; height: auto; overflow: auto; }
+      .video-wrap { max-height: 40vh; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>PLAY</h1>
-  <p>로컬 영상 플레이어</p>
-</header>
+<div class="topbar">
+  <div class="logo">VAULT</div>
+  <div class="subtitle">강의 영상 플레이어</div>
+</div>
 
-<div class="container">
-  <!-- Drop Zone -->
-  <div class="drop-zone" id="dropZone">
-    <input type="file" id="fileInput" accept="video/*" />
-    <span class="drop-icon">🎬</span>
-    <h2>영상을 여기에 드래그하거나 클릭하세요</h2>
-    <p>MP4 · MOV · AVI · MKV · WEBM 등 지원</p>
-  </div>
-
-  <!-- Player -->
-  <div class="player-wrap" id="playerWrap">
-    <div class="video-container">
-      <video id="video"></video>
+<div class="main">
+  <div class="player-side">
+    <div class="video-wrap">
+      <video id="video" autoplay></video>
+      <div class="error-state" id="errorState">
+        <div class="icon">⚠️</div>
+        <p>영상 파일을 불러올 수 없습니다</p>
+        <p style="font-size:0.65rem; margin-top:0.3rem; opacity:0.35;">파일이 같은 폴더에 있는지 확인하세요</p>
+      </div>
     </div>
     <div class="controls">
-      <div class="progress-bar-wrap" id="progressWrap">
-        <div class="progress-bar-fill" id="progressFill"></div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-fill" id="progressFill"></div>
       </div>
-      <div class="controls-row">
-        <button class="btn" id="playBtn" title="재생/일시정지">▶</button>
-        <div class="volume-wrap">
-          <button class="btn" id="muteBtn" title="음소거">🔊</button>
-          <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1"/>
+      <div class="ctrl-row">
+        <button class="btn" id="prevBtn">⏮</button>
+        <button class="btn" id="playBtn">▶</button>
+        <button class="btn" id="nextBtn">⏭</button>
+        <div class="vol-wrap">
+          <button class="btn" id="muteBtn">🔊</button>
+          <input type="range" class="vol-slider" id="volSlider" min="0" max="1" step="0.05" value="1"/>
         </div>
-        <span class="file-name" id="fileName"></span>
-        <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+        <span class="now-playing" id="nowPlaying">—</span>
+        <span class="time-disp" id="timeDisp">0:00 / 0:00</span>
       </div>
     </div>
-    <button class="change-btn" id="changeBtn">다른 영상 열기</button>
+  </div>
+
+  <div class="playlist-side">
+    <div class="playlist-header">
+      <h2>PLAYLIST</h2>
+      <span class="count-badge" id="countBadge">0</span>
+    </div>
+    <div class="playlist-list" id="playlistList"></div>
   </div>
 </div>
 
-<footer>no upload · plays locally in your browser</footer>
-
 <script>
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('fileInput');
-  const playerWrap = document.getElementById('playerWrap');
+  // ✅ 영상 추가/수정은 여기서!
+  const playlist = [
+    { title: "강의 1", file: "강의1.mp4" },
+    { title: "강의 2", file: "강의2.mp4" },
+    { title: "강의 3", file: "강의3.mp4" },
+    // 추가 예시: { title: "강의 4", file: "강의4.mp4" },
+  ];
+
   const video = document.getElementById('video');
   const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const muteBtn = document.getElementById('muteBtn');
-  const volumeSlider = document.getElementById('volumeSlider');
+  const volSlider = document.getElementById('volSlider');
   const progressFill = document.getElementById('progressFill');
   const progressWrap = document.getElementById('progressWrap');
-  const timeDisplay = document.getElementById('timeDisplay');
-  const fileNameEl = document.getElementById('fileName');
-  const changeBtn = document.getElementById('changeBtn');
+  const timeDisp = document.getElementById('timeDisp');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const playlistList = document.getElementById('playlistList');
+  const countBadge = document.getElementById('countBadge');
+  const errorState = document.getElementById('errorState');
 
-  function loadFile(file) {
-    if (!file || !file.type.startsWith('video/')) {
-      alert('영상 파일을 선택해주세요.');
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    video.src = url;
-    fileNameEl.textContent = file.name;
-    dropZone.style.display = 'none';
-    playerWrap.classList.add('active');
-    video.play();
-    playBtn.textContent = '⏸';
+  let currentIndex = 0;
+
+  function formatTime(s) {
+    if (isNaN(s)) return '0:00';
+    return Math.floor(s/60) + ':' + Math.floor(s%60).toString().padStart(2,'0');
   }
 
-  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+  function playVideo(index) {
+    if (index < 0 || index >= playlist.length) return;
+    currentIndex = index;
+    errorState.classList.remove('show');
+    video.src = playlist[index].file;
+    video.play().catch(() => {});
+    playBtn.textContent = '⏸';
+    nowPlaying.textContent = playlist[index].title;
+    renderPlaylist();
+  }
 
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    loadFile(e.dataTransfer.files[0]);
-  });
+  function renderPlaylist() {
+    playlistList.innerHTML = '';
+    countBadge.textContent = playlist.length;
+    playlist.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = 'playlist-item' + (i === currentIndex ? ' active' : '');
+      el.innerHTML = `<span class="item-num">${i === currentIndex ? '▶' : i+1}</span><span class="item-name">${item.title}</span>`;
+      el.addEventListener('click', () => playVideo(i));
+      playlistList.appendChild(el);
+    });
+  }
 
   playBtn.addEventListener('click', () => {
     if (video.paused) { video.play(); playBtn.textContent = '⏸'; }
     else { video.pause(); playBtn.textContent = '▶'; }
   });
-
-  video.addEventListener('ended', () => { playBtn.textContent = '▶'; });
-
+  prevBtn.addEventListener('click', () => { if (currentIndex > 0) playVideo(currentIndex - 1); });
+  nextBtn.addEventListener('click', () => { if (currentIndex < playlist.length - 1) playVideo(currentIndex + 1); });
+  video.addEventListener('ended', () => {
+    if (currentIndex < playlist.length - 1) playVideo(currentIndex + 1);
+    else playBtn.textContent = '▶';
+  });
+  video.addEventListener('error', () => errorState.classList.add('show'));
   muteBtn.addEventListener('click', () => {
     video.muted = !video.muted;
     muteBtn.textContent = video.muted ? '🔇' : '🔊';
   });
-
-  volumeSlider.addEventListener('input', () => {
-    video.volume = volumeSlider.value;
-    muteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+  volSlider.addEventListener('input', () => {
+    video.volume = volSlider.value;
+    muteBtn.textContent = volSlider.value == 0 ? '🔇' : '🔊';
   });
-
-  function formatTime(s) {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60).toString().padStart(2, '0');
-    return `${m}:${sec}`;
-  }
-
   video.addEventListener('timeupdate', () => {
     const pct = video.duration ? (video.currentTime / video.duration) * 100 : 0;
     progressFill.style.width = pct + '%';
-    timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
+    timeDisp.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
   });
-
   progressWrap.addEventListener('click', e => {
-    const rect = progressWrap.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    video.currentTime = ratio * video.duration;
+    if (!video.duration) return;
+    const r = progressWrap.getBoundingClientRect();
+    video.currentTime = ((e.clientX - r.left) / r.width) * video.duration;
   });
-
-  changeBtn.addEventListener('click', () => {
-    video.pause();
-    video.src = '';
-    playerWrap.classList.remove('active');
-    dropZone.style.display = '';
-    fileInput.value = '';
-    playBtn.textContent = '▶';
-  });
-
-  // Keyboard shortcuts
   document.addEventListener('keydown', e => {
-    if (!playerWrap.classList.contains('active')) return;
     if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
-    if (e.code === 'ArrowRight') video.currentTime = Math.min(video.duration, video.currentTime + 5);
-    if (e.code === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 5);
+    if (e.code === 'ArrowRight') video.currentTime = Math.min(video.duration||0, video.currentTime+5);
+    if (e.code === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime-5);
   });
+
+  renderPlaylist();
+  playVideo(0);
 </script>
 </body>
 </html>
